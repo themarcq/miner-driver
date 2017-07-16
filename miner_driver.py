@@ -1,10 +1,14 @@
 #!/usr/bin/python3
-from daemonize import Daemonize
+from datetime import datetime, timedelta
 import socket
 import json
 import time
 import requests
 import sys
+import threading
+
+
+MINER_DATA_REQUEST = json.dumps({"id":0,"jsonrpc":"2.0","method":"miner_getstat1"})
 
 
 class Netcat:
@@ -47,12 +51,14 @@ class HubConnector():
             req = requests.post(
                 "{}/{}".format(self.address, endpoint),
                 headers=self.headers,
-                json=data
+                json=data,
+                timeout=0.5
             )
         except:
             ...
-        if req.status_code // 100 != 2:
-            req.raise_for_status()
+        else:
+            if req.status_code // 100 != 2:
+                req.raise_for_status()
 
     def _get_headers(self, token):
         return {
@@ -130,41 +136,45 @@ def load_config(path):
     return config_json
 
 
+def download_and_save_miner_data(miner, connector):
+    try:
+        nc = Netcat(miner.ip, miner.port)
+        nc.write(bytes(MINER_DATA_REQUEST, 'utf-8'))
+        result = json.loads(nc.read().decode('utf-8'))
+    except Exception as e:
+        result = {"error": e}
+    else:
+        nc.close()
+    if not result['error']:
+        result = result['result']
+    miner.save(result, connector)
+
+
+def wait_till_full_minute():
+    time.sleep(
+        60 - int(datetime.now().timestamp())%60
+    )
+
+
 def main(config_path):
     print('Initializing...')
-    data = json.dumps({"id":0,"jsonrpc":"2.0","method":"miner_getstat1"})
     config = load_config(config_path)
     connector = HubConnector(**config['database'])
     miners = {o['index']: Miner(**o) for o in config['miners']}
-    probing_delay = config.get('probing_delay', 60)
+    socket.setdefaulttimeout(10)
 
     while True:
+        wait_till_full_minute()
         print('Probing...')
         for index, miner in miners.items():
-            try:
-                nc = Netcat(miner.ip, miner.port)
-                nc.write(bytes(data, 'utf-8'))
-                result = json.loads(nc.read().decode('utf-8'))
-            except Exception as e:
-                result = {"error": e}
-            if not result['error']:
-                result = result['result']
-            nc.close()
-            miner.save(result, connector)
-        time.sleep(probing_delay)
+            t = threading.Thread(target=download_and_save_miner_data, args=(miner, connector))
+            t.start()
 
 
 if __name__ == '__main__':
-    daemonize = False
     config_path = "config.json"
     params = iter(sys.argv[1:])
     for param in params:
-        if param in ['-d', '--daemon']:
-            daemonize = True
-        elif param in ['-c', '--config']:
+        if param in ['-c', '--config']:
             config_path = next(params, '')
-    if daemonize:
-        daemon = Daemonize(action=main, pid="/tmp/miner_driver.pid", app="miner_driver")
-        daemon.start()
-    else:
-        main(config_path)
+    main(config_path)
