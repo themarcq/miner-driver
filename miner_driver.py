@@ -152,7 +152,7 @@ def download_and_save_miner_data(miner, connector):
 
 def wait_till_full_minute():
     time.sleep(
-        60 - int(datetime.now().timestamp())%60
+        60 - int(datetime.now().timestamp())%60 + 5
     )
 
 
