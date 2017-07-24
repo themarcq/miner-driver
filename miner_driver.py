@@ -92,19 +92,23 @@ class Miner():
                 debug_http_error(e)
         elif type(result) is list:
             hashrate, shares, rejected_shares = result[2].split(';')
+            alt_hashrate, alt_shares, alt_rejected_shares = result[4].split(';')
             gpus = []
             hashrates = result[3].split(';')
+            alt_hashrates = result[5].split(';')
             health_stats = result[6].split(';')
             for i in range(len(hashrates)):
                 gpus.append({
                     'hashrate': hashrates[i],
+                    'alt_hashrate': alt_hashrates[i],
                     'temperature': health_stats[i*2],
                     'fan_speed': health_stats[i*2+1]
                 })
             data = {
                 'worker_id': self.index,
-                'uptime': result[1],
+                'uptime': max(int(result[1]), 0),
                 'total_hashrate': hashrate,
+                'total_alt_hashrate': alt_hashrate,
                 'shares': shares,
                 'rejected_shares': rejected_shares,
                 'gpu_stats': gpus,
