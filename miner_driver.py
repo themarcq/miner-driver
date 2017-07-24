@@ -100,7 +100,7 @@ class Miner():
             for i in range(len(hashrates)):
                 gpus.append({
                     'hashrate': hashrates[i],
-                    'alt_hashrate': alt_hashrates[i],
+                    'alt_hashrate': alt_hashrates[i] if alt_hashrates[i] != 'off' else 0,
                     'temperature': health_stats[i*2],
                     'fan_speed': health_stats[i*2+1]
                 })
@@ -108,7 +108,7 @@ class Miner():
                 'worker_id': self.index,
                 'uptime': max(int(result[1]), 0),
                 'total_hashrate': hashrate,
-                'total_alt_hashrate': alt_hashrate,
+                'total_alt_hashrate': alt_hashrate if alt_hashrate != 'off' else 0,
                 'shares': shares,
                 'rejected_shares': rejected_shares,
                 'gpu_stats': gpus,
