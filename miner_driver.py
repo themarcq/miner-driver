@@ -181,4 +181,6 @@ if __name__ == '__main__':
     for param in params:
         if param in ['-c', '--config']:
             config_path = next(params, '')
+        if param in ['-o', '--output']:
+            sys.stdout = open(next(params, ''), 'w')
     main(config_path)
