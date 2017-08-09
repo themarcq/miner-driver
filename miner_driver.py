@@ -6,6 +6,7 @@ import time
 import requests
 import sys
 import threading
+import traceback
 
 
 MINER_DATA_REQUEST = json.dumps({"id":0,"jsonrpc":"2.0","method":"miner_getstat1"})
@@ -146,16 +147,21 @@ def load_config(path):
 
 def download_and_save_miner_data(miner, connector):
     try:
-        nc = Netcat(miner.ip, miner.port)
-        nc.write(bytes(MINER_DATA_REQUEST, 'utf-8'))
-        result = json.loads(nc.read().decode('utf-8'))
+        try:
+            nc = Netcat(miner.ip, miner.port)
+            nc.write(bytes(MINER_DATA_REQUEST, 'utf-8'))
+            result = json.loads(nc.read().decode('utf-8'))
+        except Exception as e:
+            result = {"error": e}
+        else:
+            nc.close()
+        if not result['error']:
+            result = result['result']
+        miner.save(result, connector)
     except Exception as e:
-        result = {"error": e}
-    else:
-        nc.close()
-    if not result['error']:
-        result = result['result']
-    miner.save(result, connector)
+        # the show must go on
+        traceback.print_exc(file=sys.stdout)
+        pass
 
 
 def wait_till_full_minute():
