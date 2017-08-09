@@ -85,10 +85,12 @@ class Miner():
                 data['worker_id'],
                 str(data['error'])
             ))
+            sys.stdout.flush()
             try:
                 con.post(self.ERRORS_ENDPOINT, data)
             except requests.HTTPError as e:
                 print('ERROR - could not send an error')
+                sys.stdout.flush()
                 debug_http_error(e)
         elif type(result) is list:
             hashrate, shares, rejected_shares = result[2].split(';')
@@ -117,6 +119,7 @@ class Miner():
                 data['worker_id'],
                 data['total_hashrate']
             ))
+            sys.stdout.flush()
             try:
                 con.post(self.STATS_ENDPOINT, data)
             except requests.HTTPError as e:
@@ -132,6 +135,7 @@ def debug_http_error(e):
         headers=e.request.headers
     )
     print(data)
+    sys.stdout.flush()
 
 
 def load_config(path):
@@ -162,6 +166,7 @@ def wait_till_full_minute():
 
 def main(config_path):
     print('Initializing...')
+    sys.stdout.flush()
     config = load_config(config_path)
     connector = HubConnector(**config['database'])
     miners = {o['index']: Miner(**o) for o in config['miners']}
@@ -170,6 +175,7 @@ def main(config_path):
     while True:
         wait_till_full_minute()
         print('Probing...')
+        sys.stdout.flush()
         for index, miner in miners.items():
             t = threading.Thread(target=download_and_save_miner_data, args=(miner, connector))
             t.start()
