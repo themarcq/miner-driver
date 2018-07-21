@@ -8,8 +8,7 @@ import sys
 import threading
 import traceback
 
-
-MINER_DATA_REQUEST = json.dumps({"id":0,"jsonrpc":"2.0","method":"miner_getstat1"})
+MINER_DATA_REQUEST = bytes(json.dumps({"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}) + "\r\n", 'utf-8')
 
 
 class Netcat:
@@ -149,13 +148,13 @@ def download_and_save_miner_data(miner, connector):
     try:
         try:
             nc = Netcat(miner.ip, miner.port)
-            nc.write(bytes(MINER_DATA_REQUEST, 'utf-8'))
+            nc.write(MINER_DATA_REQUEST)
             result = json.loads(nc.read().decode('utf-8'))
         except Exception as e:
             result = {"error": e}
         else:
             nc.close()
-        if not result['error']:
+        if 'error' not in result or not result['error']:
             result = result['result']
         miner.save(result, connector)
     except Exception as e:
